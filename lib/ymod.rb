@@ -4,6 +4,10 @@ require "active_support/time"
 require "rsolr"
 require "stringex"
 
+unless defined? Boolean
+  class Boolean; end
+end
+
 # class Page
 #   
 #   include Ymod::Model
@@ -107,7 +111,7 @@ module Ymod
               end
             when "Integer"
               v.to_i
-            when "Ymod::Model::Boolean"
+            when "Boolean"
               v.to_s == "true" ? true : false
             else
               v
