@@ -13,17 +13,24 @@
     property :title, String
     property :tags, Array
     validates_presence_of :title
+    before_save lambda{|record|
+      puts "Savin' shiz"
+    }
     def to_solr
       super.merge(:title => title, :tags => tags)
     end
   end
   
-  page = Page.new(:title => "dummy face", :tags => ["moo"])
-  page.save
+  page = Page.new(:path => "index", :title => "dummy face", :tags => ["moo"])
+  begin
+    p.save
+  rescue Ymod::RecordInvalidError
+    puts $!.record.errors.inspect
+  end
   # data now persisted in yaml file, and indexed in solr...
   
-  result = Page.all("fq" => "tags:moo", "facet" => true, "facet.field" => "tags")
-  result["response"]["docs"].each do |page|
+  pages = Page.all("fq" => "tags:moo", "facet" => true, "facet.field" => "tags")
+  pages.each do |page|
     puts page.title # => "dummy face"
     puts page.tags # => ['moo']
   end

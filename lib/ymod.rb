@@ -3,15 +3,40 @@ require "active_model"
 require "rsolr"
 require "stringex"
 
+# class Page
+#   include Ymod::Model
+#   before_save lambda{|record|
+#     puts "Savin' shiz"
+#   }
+# end
+# 
+# p = Page.new
+# 
+# p.attributes = {:path => 1}
+# 
+# begin
+#   p.save
+# rescue Ymod::RecordInvalidError
+#   puts $!.record.errors.inspect
+# end
+
 module Ymod
   
-  class RecordNotFound < RuntimeError
+  class RecordNotFoundError < RuntimeError
     attr_reader :id
     def initialize id
       @id = id
     end
     def to_s
       "Record not found: #{@id}"
+    end
+  end
+  
+  class RecordInvalidError < RuntimeError
+    attr_reader :record
+    def initialize(record)
+      @record = record
+      super(@record.errors.full_messages.join(", "))
     end
   end
   
@@ -29,6 +54,7 @@ module Ymod
       base.extend ActiveModel::Callbacks
       base.send :include, ActiveModel::Validations
       base.send :include, ActiveModel::Serialization
+      base.send :include, ActiveModel::Conversion
       base.send :include, Ymod::Properties
       base.send :include, Ymod::Findable
       base.extend Properties::ClassMethods
@@ -55,6 +81,8 @@ module Ymod
       end
     end
     
+    alias :attributes= :update_attributes
+    
     def generate_id
       source_path.to_url
     end
@@ -76,6 +104,8 @@ module Ymod
       end
       out
     end
+    
+    alias :attributes :to_hash
     
     def to_solr
       {
@@ -100,7 +130,7 @@ module Ymod
     
     def save
       _run_save_callbacks do
-        raise "Invalid record" unless valid?
+        raise RecordInvalidError.new(self) unless valid?
         yaml_data = to_hash{|k,v| [k.to_s, v]}
         content = yaml_data.delete "content"
         self.class.solr.add to_solr
@@ -180,7 +210,7 @@ module Ymod
         res = solr.select :params => {"q" => %Q(id:(#{id})), "rows" => 1}
         yield res if block_given?
         doc = res["response"]["docs"][0]
-        raise RecordNotFound.new(id) unless doc
+        raise RecordNotFoundError.new(id) unless doc
         instance = load_from_file doc["source_path"]
         instance.instance_variable_set "@id", doc["id"]
         instance
