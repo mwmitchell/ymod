@@ -98,17 +98,17 @@ module Ymod
                 raise "#{self.class} @#{p.name}: #{v.inspect} couldn't be parsed by DateTime.parse"
               end
             when "String"
-              v.to_s
+              v.to_s unless v.nil?
             when "Array"
               begin
-                v.to_a
+                v.to_a unless v.nil?
               rescue
                 "#{self.class} @#{p.name}: #{v.inspect} can't be converted to an Array"
               end
             when "Integer"
-              v.to_i
+              v.to_i unless v.blank?
             when "Boolean"
-              v.to_s == "true" ? true : false
+              v.to_s == "true" ? true : false unless v.blank?
             else
               v
             end
