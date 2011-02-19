@@ -36,7 +36,13 @@ module Ymod
       base.validates_presence_of :path
     end
     
+    attr_reader :id
+    
     def initialize attrs = {}
+      update_attributes attrs
+    end
+    
+    def update_attributes attrs
       self.class.properties.each do |p|
         instance_variable_set "@#{p.name}", (attrs[p.name] || attrs[p.name.to_s])
       end
@@ -94,7 +100,14 @@ module Ymod
         f << "---\n"
         f << content
       end
+      @id = generate_id
       self
+    end
+    
+    def update attrs
+      puts attrs.inspect
+      update_attributes attrs
+      save
     end
     
   end
@@ -140,17 +153,18 @@ module Ymod
         tname_filter = "type_name:(#{type_name})"
         params["fq"] << tname_filter unless params["fq"].any?{|fq|fq == tname_filter}
         sresponse = solr.select :params => params
-        sresponse["response"]["docs"].map! { |d|
+        yield sresponse if block_given?
+        sresponse["response"]["docs"].map { |d|
           klass = Kernel.const_get d["class_name"]
           instance = klass.load_from_file d["source_path"]
           instance.instance_variable_set "@id", d["id"]
           instance
         }
-        sresponse
       end
       
       def get id
-        res = solr.select :params => {:q => %Q(id:(#{id}))}
+        res = solr.select :params => {"q" => %Q(id:(#{id})), "rows" => 1}
+        yield res if block_given?
         doc = res["response"]["docs"][0]
         raise RecordNotFound.new(id) unless doc
         instance = load_from_file doc["source_path"]
@@ -166,11 +180,10 @@ module Ymod
       end
       
       def parse_data raw
-        fragments = raw.split(/^--- ?\n.+/)
+        fragments = raw.split(/^--- ?$/)[1..2]
         content = raw
         meta = {}
         if fragments.size > 1
-          fragments = raw.split(/^--- ?$/)[1..2]
           meta = fragments.shift
           content = fragments.shift
           meta = meta ? YAML.load(meta) : {}
