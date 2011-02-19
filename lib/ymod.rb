@@ -26,6 +26,7 @@ module Ymod
     
     def self.included base
       base.extend ActiveModel::Naming
+      base.extend ActiveModel::Callbacks
       base.send :include, ActiveModel::Validations
       base.send :include, ActiveModel::Serialization
       base.send :include, Ymod::Properties
@@ -34,17 +35,23 @@ module Ymod
       base.property :path, String
       base.property :content, String
       base.validates_presence_of :path
+      
+      base.define_model_callbacks :save, :update, :destroy, :update_attributes, :initialize
     end
     
     attr_reader :id
     
     def initialize attrs = {}
-      update_attributes attrs
+      _run_initialize_callbacks do
+        update_attributes attrs
+      end
     end
     
     def update_attributes attrs
-      self.class.properties.each do |p|
-        instance_variable_set "@#{p.name}", (attrs[p.name] || attrs[p.name.to_s])
+      _run_update_attributes_callbacks do
+        self.class.properties.each do |p|
+          instance_variable_set "@#{p.name}", (attrs[p.name] || attrs[p.name.to_s])
+        end
       end
     end
     
@@ -82,32 +89,39 @@ module Ymod
     end
     
     def destroy
-      if @id
-        File.delete File.join(Ymod.data_path, source_path)
-        Ymod.solr.delete_by_query("id:(#{@id})")
-        Ymod.solr.commit
+      _run_destroy_callbacks do
+        if @id
+          File.delete File.join(Ymod.data_path, source_path)
+          Ymod.solr.delete_by_query("id:(#{@id})")
+          Ymod.solr.commit
+        end
       end
     end
     
     def save
-      raise "Invalid record" unless valid?
-      yaml_data = to_hash{|k,v| [k.to_s, v]}
-      content = yaml_data.delete "content"
-      self.class.solr.add to_solr
-      self.class.solr.commit
-      File.open("data/#{type_name}s/#{path}", "w") do |f|
-        f << yaml_data.to_yaml
-        f << "---\n"
-        f << content
+      _run_save_callbacks do
+        raise "Invalid record" unless valid?
+        yaml_data = to_hash{|k,v| [k.to_s, v]}
+        content = yaml_data.delete "content"
+        self.class.solr.add to_solr
+        self.class.solr.commit
+        file_path = "data/#{type_name}s/#{path}"
+        FileUtils.mkdir_p File.dirname(file_path)
+        File.open(file_path, "w") do |f|
+          f << yaml_data.to_yaml
+          f << "---\n"
+          f << content
+        end
+        @id = generate_id
+        self
       end
-      @id = generate_id
-      self
     end
     
     def update attrs
-      puts attrs.inspect
-      update_attributes attrs
-      save
+      _run_update_callbacks do
+        update_attributes attrs
+        save
+      end
     end
     
   end
