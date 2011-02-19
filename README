@@ -1,0 +1,61 @@
+=Ymod
+
+==?
+  - No Database
+  - SCM friendly - stores data in YAML files
+  - Index + find data via Solr
+  - Uses ActiveModel
+
+==Example
+
+  class Page
+    include Ymod::Model
+    property :title, String
+    property :tags, Array
+    validates_presence_of :title
+    def to_solr
+      super.merge(:title => title, :tags => tags)
+    end
+  end
+  
+  page = Page.new(:title => "dummy face", :tags => ["moo"])
+  page.save
+  # data now persisted in yaml file, and indexed in solr...
+  
+  result = Page.all("fq" => "tags:moo", "facet" => true, "facet.field" => "tags")
+  result["response"]["docs"].each do |page|
+    puts page.title # => "dummy face"
+    puts page.tags # => ['moo']
+  end
+
+==Disclaimer
+Just playing.
+
+==TODO
+Lots, but not too much.
+
+== Note on Patches/Pull Requests
+* Fork the project.
+* Make your feature addition or bug fix.
+* Add tests for it. This is important so I don't break it in a future version unintentionally.
+* Commit, do not mess with rakefile, version, or history
+  (if you want to have your own version, that is fine but bump version in a commit by itself I can ignore when I pull)
+* Send me a pull request. Bonus points for topic branches.
+
+== Note on Patches/Pull Requests
+ 
+* Fork the project.
+* Make your feature addition or bug fix.
+* Add tests for it. This is important so I don't break it in a
+  future version unintentionally.
+* Commit, do not mess with rakefile, version, or history.
+  (if you want to have your own version, that is fine but bump version in a commit by itself I can ignore when I pull)
+* Send me a pull request. Bonus points for topic branches.
+
+==Author
+
+Matt Mitchell <mailto:goodieboy@gmail.com>
+
+==Copyright
+
+Copyright (c) 2011 Matt Mitchell. See LICENSE for details.
