@@ -56,10 +56,6 @@ module Ymod
   
   module Model
     
-    class Boolean
-
-    end
-    
     def self.included base
       base.extend ActiveModel::Naming
       base.extend ActiveModel::Callbacks
