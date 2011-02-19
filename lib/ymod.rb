@@ -1,23 +1,26 @@
 require "rubygems"
 require "active_model"
+require "active_support/time"
 require "rsolr"
 require "stringex"
 
 # class Page
+#   
 #   include Ymod::Model
-#   before_save lambda{|record|
-#     puts "Savin' shiz"
-#   }
+#   property :tags, Array
+#   property :visible, Boolean
+#   property :test, DateTime
+#   
 # end
 # 
-# p = Page.new
-# 
-# p.attributes = {:path => 1}
+# p = Page.new(:path => "index.html", :tags => %W(one), :test => "2011-02-28")
 # 
 # begin
 #   p.save
 # rescue Ymod::RecordInvalidError
 #   puts $!.record.errors.inspect
+# rescue
+#   puts p.created_at.month
 # end
 
 module Ymod
@@ -49,6 +52,10 @@ module Ymod
   
   module Model
     
+    class Boolean
+
+    end
+    
     def self.included base
       base.extend ActiveModel::Naming
       base.extend ActiveModel::Callbacks
@@ -58,11 +65,17 @@ module Ymod
       base.send :include, Ymod::Properties
       base.send :include, Ymod::Findable
       base.extend Properties::ClassMethods
+      base.define_model_callbacks :save, :update, :destroy, :update_attributes, :initialize
+      #
       base.property :path, String
       base.property :content, String
       base.validates_presence_of :path
-      
-      base.define_model_callbacks :save, :update, :destroy, :update_attributes, :initialize
+      base.before_save lambda{|record|
+        @created_at ||= DateTime.now
+        @updated_at = DateTime.now if @id
+      }
+      base.property :created_at, DateTime
+      base.property :updated_at, DateTime
     end
     
     attr_reader :id
@@ -76,7 +89,30 @@ module Ymod
     def update_attributes attrs
       _run_update_attributes_callbacks do
         self.class.properties.each do |p|
-          instance_variable_set "@#{p.name}", (attrs[p.name] || attrs[p.name.to_s])
+          v = (attrs[p.name] || attrs[p.name.to_s])
+          value = case p.primitive.to_s
+            when "DateTime"
+              begin
+                DateTime.parse v unless v.nil?
+              rescue
+                raise "#{self.class} @#{p.name}: #{v.inspect} couldn't be parsed by DateTime.parse"
+              end
+            when "String"
+              v.to_s
+            when "Array"
+              begin
+                v.to_a
+              rescue
+                "#{self.class} @#{p.name}: #{v.inspect} can't be converted to an Array"
+              end
+            when "Integer"
+              v.to_i
+            when "Ymod::Model::Boolean"
+              v.to_s == "true" ? true : false
+            else
+              v
+            end
+          instance_variable_set "@#{p.name}", value
         end
       end
     end
