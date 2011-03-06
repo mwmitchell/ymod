@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<solr persistent="false">
+  <cores adminPath="/admin/cores">
+    <core name="lunchbox_test" instanceDir="." dataDir="data/lunchbox_test" />
+    <core name="lunchbox_development" instanceDir="." dataDir="data/lunchbox_development" />
+    <core name="lunchbox_production" instanceDir="." dataDir="data/lunchbox_production" />
+  </cores>
+</solr>
