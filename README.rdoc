@@ -1,8 +1,8 @@
 =Ymod
+A file-system based "ORM". Record data is stored in YAML files. Records are discovered via Solr.
 
 ==?
-  - No Database
-  - SCM friendly - stores data in YAML files
+  - No Database -> SCM friendly > stores data in YAML files
   - Index + find data via Solr
   - Uses ActiveModel
 
@@ -13,24 +13,25 @@
     property :title, String
     property :tags, Array
     validates_presence_of :title
-    before_save lambda{|record|
+    before_save { |record|
       puts "Savin' shiz"
     }
-    def to_solr
-      super.merge(:title => title, :tags => tags)
-    end
+    solr_mapping {{
+      :title => title,
+      :tags => tags
+    }}
   end
   
   page = Page.new(:path => "index", :title => "dummy face", :tags => ["moo"])
   begin
-    p.save
+    p.save!
   rescue Ymod::RecordInvalidError
     puts $!.record.errors.inspect
   end
   # data now persisted in yaml file, and indexed in solr...
   
-  pages = Page.all("fq" => "tags:moo", "facet" => true, "facet.field" => "tags")
-  pages.each do |page|
+  response = Page.solr_find("*:*", "fq" => "tags:moo", "facet" => true, "facet.field" => "tags")
+  response.each_hit do |page|
     puts page.title # => "dummy face"
     puts page.tags # => ['moo']
   end
