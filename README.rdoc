@@ -1,7 +1,7 @@
 =Ymod
 A file-system based "ORM": Record data is stored in YAML files. Records are discovered via Solr.
 
-==?
+=="Features"
   - No Database -> SCM friendly > stores data in YAML files
   - Index + find data via Solr
   - Uses ActiveModel (callbacks, validations etc.)
