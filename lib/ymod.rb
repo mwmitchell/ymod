@@ -82,32 +82,7 @@ module Ymod
       _run_update_attributes_callbacks do
         self.class.properties.each do |p|
           v = (attrs[p.name] || attrs[p.name.to_s])
-          value = case p.primitive.to_s
-            when "DateTime"
-              begin
-                if Time === v
-                  v.to_datetime
-                else
-                  DateTime.parse v unless v.nil?
-                end
-              rescue
-                raise "#{self.class} @#{p.name}: #{v.inspect} couldn't be parsed by DateTime.parse"
-              end
-            when "String"
-              v.to_s unless v.nil?
-            when "Array"
-              begin
-                v.to_a unless v.nil?
-              rescue
-                "#{self.class} @#{p.name}: #{v.inspect} can't be converted to an Array"
-              end
-            when "Integer"
-              v.to_i unless v.blank?
-            when "Boolean"
-              v.to_s == "true" ? true : false unless v.blank?
-            else
-              v
-            end
+          value = typed_value p, v
           instance_variable_set "@#{p.name}", value
         end
       end
@@ -169,6 +144,35 @@ module Ymod
       end
     end
     
+    def typed_value p, v
+      case p.primitive.to_s
+        when "DateTime"
+          begin
+            if Time === v
+              v.to_datetime
+            else
+              DateTime.parse v unless v.nil?
+            end
+          rescue
+            raise "#{self.class} @#{p.name}: #{v.inspect} couldn't be parsed by DateTime.parse"
+          end
+        when "String"
+          v.to_s unless v.nil?
+        when "Array"
+          begin
+            v.to_a unless v.nil?
+          rescue
+            "#{self.class} @#{p.name}: #{v.inspect} can't be converted to an Array"
+          end
+        when "Integer"
+          v.to_i unless v.blank?
+        when "Boolean"
+          v.to_s == "true" ? true : false unless v.blank?
+      else
+        v
+      end
+    end
+    
   end
   
   class Property
@@ -197,7 +201,7 @@ module Ymod
   
   module Loadable
     
-    def load_from_file source_path
+    def load source_path
       full_path = "#{Ymod.data_path}/#{source_path}"
       raw = File.read(full_path)
       meta, content = parse_data raw

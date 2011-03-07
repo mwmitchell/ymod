@@ -1,40 +1,43 @@
 =Ymod
-A file-system based "ORM". Record data is stored in YAML files. Records are discovered via Solr.
+A file-system based "ORM": Record data is stored in YAML files. Records are discovered via Solr.
 
 ==?
   - No Database -> SCM friendly > stores data in YAML files
   - Index + find data via Solr
-  - Uses ActiveModel
+  - Uses ActiveModel (callbacks, validations etc.)
 
 ==Example
+  
+  Ymod.data_path = "./data"
+  Ymod::Solr.url = "http://127.0.0.1:8983/solr/lunchbox_development"
+  Ymod::Solr.connection.delete_by_query("*:*")
+  Ymod::Solr.connection.commit
 
   class Page
     include Ymod::Model
     property :title, String
     property :tags, Array
     validates_presence_of :title
-    before_save { |record|
-      puts "Savin' shiz"
-    }
     solr_mapping {{
-      :title => title,
-      :tags => tags
+      :tags => tags,
+      :title => title
     }}
   end
-  
-  page = Page.new(:path => "index", :title => "dummy face", :tags => ["moo"])
+
+  page = Page.new(:path => "index", :title => "-.-- --.-", :tags => ["cq"])
+
   begin
-    p.save!
+    page.save!
   rescue Ymod::RecordInvalidError
     puts $!.record.errors.inspect
   end
-  # data now persisted in yaml file, and indexed in solr...
-  
-  response = Page.solr_find("*:*", "fq" => "tags:moo", "facet" => true, "facet.field" => "tags")
-  response.each_hit do |page|
-    puts page.title # => "dummy face"
-    puts page.tags # => ['moo']
-  end
+
+  # page = Page.load("pages/index")
+
+  res = Page.find("*:*", :fq => "tags:morse")
+  res.each_hit { |rec|
+    puts rec.title
+  }
 
 ==Disclaimer
 Just playing.

@@ -8,14 +8,16 @@ module Ymod::Solr
   end
   
   def self.included base
-    base.send :include, InstanceMethods
-    base.extend ClassMethods
-    base.after_save lambda{|record|
-      index_solr_doc!
-    }
-    base.after_destroy lambda{|record|
-      destroy_solr_doc!
-    }
+    base.instance_eval do
+      include InstanceMethods
+      extend ClassMethods
+      after_save lambda{|record|
+        index_solr_doc!
+      }
+      after_destroy lambda{|record|
+        destroy_solr_doc!
+      }
+    end
   end
   
   module InstanceMethods
@@ -59,7 +61,7 @@ module Ymod::Solr
       @solr_mapping_block = block
     end
     
-    def solr_find query, params = {}
+    def find query, params = {}
       params["fq"] ||= []
       params["q"] ||= query
       tname_filter = "type_name:(#{type_name})"
@@ -68,12 +70,14 @@ module Ymod::Solr
       response.extend SolrResponse
     end
     
-    def solr_find_by_id id
+    alias :all :find
+    
+    def find_by_id id
       res = solr.select :params => {"q" => %Q(id:(#{id})), "rows" => 1}
       yield res if block_given?
       doc = res["response"]["docs"][0]
       raise RecordNotFoundError.new(id) unless doc
-      instance = load_from_file doc["source_path"]
+      instance = load doc["source_path"]
       instance.instance_variable_set "@id", doc["id"]
       instance
     end
@@ -84,7 +88,7 @@ module Ymod::Solr
     def each_hit &block
       self["response"]["docs"].each do |d|
         klass = Kernel.const_get d["class_name"]
-        instance = klass.load_from_file d["source_path"]
+        instance = klass.load d["source_path"]
         instance.instance_variable_set "@id", d["id"]
         yield instance
       end
