@@ -37,7 +37,7 @@ A file-system based "ORM": Record data is stored in YAML files. Records are disc
   res = Page.find("*:*", :fq => "tags:morse")
   res.each_hit { |rec|
     date = "#{rec.created_at.year}/#{rec.created_at.month}/#{rec.created_at.day}"
-    puts "#{date} - #{rec.title}"
+    puts "#{date}: #{rec.title}"
   }
 
 ==Disclaimer
