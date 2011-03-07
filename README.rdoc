@@ -24,7 +24,7 @@ A file-system based "ORM": Record data is stored in YAML files. Records are disc
     }}
   end
 
-  page = Page.new(:path => "index", :title => "-.-- --.-", :tags => ["cq"])
+  page = Page.new(:path => "index", :title => "-.-- --.-", :tags => ["CQ", "morse"])
 
   begin
     page.save!
