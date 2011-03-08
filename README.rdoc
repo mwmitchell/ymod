@@ -14,7 +14,7 @@ A file-system based "ORM": Record data is stored in YAML files. Records are disc
 Grab a copy of Solr: http://mirror.candidhosting.com/pub/apache/lucene/solr/1.4.1/
 
 - untar/zip etc.
-
+  
   cd solr-1.4.1/example
   mv ./solr solr-original
   ln -s ../solr-home solr
