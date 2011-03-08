@@ -125,7 +125,7 @@ module Ymod
         raise RecordInvalidError.new(self) unless valid?
         yaml_data = to_hash{|k,v| [k.to_s, v]}
         content = yaml_data.delete "content"
-        file_path = "data/#{type_name}s/#{path}"
+        file_path = "#{Ymod.data_path}/#{type_name}s/#{path}"
         FileUtils.mkdir_p File.dirname(file_path)
         File.open(file_path, "w") do |f|
           f << yaml_data.to_yaml
